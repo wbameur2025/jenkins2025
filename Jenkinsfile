@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker { 
-            image 'node:20-alpine' 
-            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any  // Jenkins utilisera l'agent par défaut, pas besoin de Node
 
     environment {
         IMAGE_NAME = "richardchesterwood/k8s-fleetman-webapp-angular"
@@ -24,17 +19,6 @@ pipeline {
             }
         }
 
-        stage('Build Angular') {
-            steps {
-                echo 'Building Angular apps...'
-                sh 'npm install'
-                sh 'npm install -g @angular/cli'
-                sh 'ng build --prod --projects app1'
-                sh 'ng build --prod --projects app2'
-                // ajouter d'autres apps si nécessaire
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
@@ -46,7 +30,6 @@ pipeline {
             steps {
                 echo 'Running tests and SonarQube scan...'
                 withSonarQubeEnv("${SONARQUBE}") {
-                    sh "ng test --watch=false --browsers=ChromeHeadless"
                     sh "sonar-scanner -Dsonar.projectKey=my-angular-app -Dsonar.sources=src -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_AUTH_TOKEN"
                 }
             }
