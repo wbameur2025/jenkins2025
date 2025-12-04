@@ -1,10 +1,14 @@
 pipeline {
-    agent any  // Utilise l'agent Jenkins disponible
+    agent any
+
+    tools {
+        jdk 'jdk17'  // Nom du JDK que tu as défini dans Jenkins (Java 17)
+    }
 
     environment {
         IMAGE_NAME = "richardchesterwood/k8s-fleetman-webapp-angular"
         IMAGE_TAG = "release2"
-        // Le token est défini dans Jenkins comme "sonar-token" credentials
+        SONARQUBE_SERVER = 'SonarQube' // Nom de ton serveur SonarQube dans Jenkins
     }
 
     stages {
@@ -30,19 +34,16 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo "Running SonarQube analysis..."
-                // Injection de la config SonarQube
-                withSonarQubeEnv('SonarQube') {
-                    // Injection du token
+                withSonarQubeEnv("${SONARQUBE_SERVER}") {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
                         sh """
-                        # Assure que sonar-scanner est dans le PATH
-                        export PATH=\$PATH:/opt/sonar-scanner/bin
-
+                        export JAVA_HOME=${tool 'jdk17'}
+                        export PATH=\$JAVA_HOME/bin:\$PATH
                         sonar-scanner \
                         -Dsonar.projectKey=my-angular-app \
                         -Dsonar.sources=src \
-                        -Dsonar.host.url=\$SONAR_HOST_URL \
-                        -Dsonar.login=\$SONAR_AUTH_TOKEN
+                        -Dsonar.host.url=$SONAR_HOST_URL \
+                        -Dsonar.login=$SONAR_AUTH_TOKEN
                         """
                     }
                 }
@@ -59,7 +60,6 @@ pipeline {
                 """
             }
         }
-
     }
 
     post {
