@@ -1,6 +1,9 @@
 pipeline {
     agent {
-        docker { image 'node:20-alpine' }
+        docker { 
+            image 'node:20-alpine' 
+            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
+        }
     }
 
     environment {
@@ -33,7 +36,6 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-            agent { docker { image 'docker:24.0.6-dind' args '--privileged' } } // Docker-in-Docker pour build
             steps {
                 echo "Building Docker image..."
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
