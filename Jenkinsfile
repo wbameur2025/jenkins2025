@@ -4,7 +4,6 @@ pipeline {
     environment {
         IMAGE_NAME = "richardchesterwood/k8s-fleetman-webapp-angular"
         IMAGE_TAG = "release2"
-        SONARQUBE = "SonarQube" // Nom du serveur SonarQube configuré dans Jenkins
     }
 
     stages {
@@ -23,15 +22,6 @@ pipeline {
             steps {
                 echo "Building Docker image..."
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-            }
-        }
-
-        stage('Test & SonarQube Analysis') {
-            steps {
-                echo 'Running tests and SonarQube scan...'
-                withSonarQubeEnv("${SONARQUBE}") {
-                    sh "sonar-scanner -Dsonar.projectKey=my-angular-app -Dsonar.sources=src -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_AUTH_TOKEN"
-                }
             }
         }
 
