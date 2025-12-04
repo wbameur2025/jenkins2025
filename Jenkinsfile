@@ -1,10 +1,12 @@
 pipeline {
-    agent any
+    agent {
+        docker { image 'node:20-alpine' }
+    }
 
     environment {
         IMAGE_NAME = "richardchesterwood/k8s-fleetman-webapp-angular"
         IMAGE_TAG = "release2"
-        SONARQUBE = "SonarQube"   // Nom défini dans Jenkins Configuration
+        SONARQUBE = "SonarQube" // Nom du serveur SonarQube configuré dans Jenkins
     }
 
     stages {
@@ -23,6 +25,7 @@ pipeline {
             steps {
                 echo 'Building Angular apps...'
                 sh 'npm install'
+                sh 'npm install -g @angular/cli'
                 sh 'ng build --prod --projects app1'
                 sh 'ng build --prod --projects app2'
                 // ajouter d'autres apps si nécessaire
@@ -30,6 +33,7 @@ pipeline {
         }
 
         stage('Build Docker Image') {
+            agent { docker { image 'docker:24.0.6-dind' args '--privileged' } } // Docker-in-Docker pour build
             steps {
                 echo "Building Docker image..."
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
