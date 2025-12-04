@@ -29,8 +29,8 @@ pipeline {
             steps {
                 echo 'Deploying to Kubernetes...'
                 sh """
-                sed -i 's|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|' .manifests/workloads.yaml
-                kubectl apply -f .manifests/
+                sed -i 's|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|' manifests/workloads.yaml
+                kubectl apply -f manifests/
                 kubectl get pods
                 """
             }
@@ -40,10 +40,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline finished successfully ✅"
+            echo "Pipeline finished successfully... "
         }
         failure {
-            echo "Pipeline failed ❌"
+            echo "Pipeline failed..."
         }
         always {
             echo "Pipeline run completed."
