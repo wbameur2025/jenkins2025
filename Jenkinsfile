@@ -1,5 +1,5 @@
 pipeline {
-    agent any  // Utilise l'agent par défaut Jenkins
+    agent any  // Utilise l'agent Jenkins disponible
 
     environment {
         IMAGE_NAME = "richardchesterwood/k8s-fleetman-webapp-angular"
@@ -11,6 +11,7 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
+                echo "Checking out source code..."
                 checkout scm
                 script {
                     def commit_id = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
@@ -29,14 +30,19 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo "Running SonarQube analysis..."
-                withSonarQubeEnv('SonarQube') { // 'SonarQube' = nom de ton serveur dans Jenkins
+                // Injection de la config SonarQube
+                withSonarQubeEnv('SonarQube') {
+                    // Injection du token
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
                         sh """
+                        # Assure que sonar-scanner est dans le PATH
+                        export PATH=\$PATH:/opt/sonar-scanner/bin
+
                         sonar-scanner \
                         -Dsonar.projectKey=my-angular-app \
                         -Dsonar.sources=src \
-                        -Dsonar.host.url=$SONAR_HOST_URL \
-                        -Dsonar.login=$SONAR_AUTH_TOKEN
+                        -Dsonar.host.url=\$SONAR_HOST_URL \
+                        -Dsonar.login=\$SONAR_AUTH_TOKEN
                         """
                     }
                 }
@@ -53,6 +59,7 @@ pipeline {
                 """
             }
         }
+
     }
 
     post {
