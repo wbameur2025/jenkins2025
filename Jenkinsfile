@@ -1,9 +1,10 @@
 pipeline {
-    agent any  // Jenkins utilisera l'agent par défaut
+    agent any  // Utilise l'agent par défaut Jenkins
 
     environment {
         IMAGE_NAME = "richardchesterwood/k8s-fleetman-webapp-angular"
         IMAGE_TAG = "release2"
+        // Le token est défini dans Jenkins comme "sonar-token" credentials
     }
 
     stages {
@@ -12,7 +13,6 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    // Utilisation de 'def' pour éviter le warning Jenkins
                     def commit_id = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     echo "Commit ID: ${commit_id}"
                 }
@@ -29,15 +29,16 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo "Running SonarQube analysis..."
-                // 'SonarQube' : nom du serveur défini dans Jenkins
-                withSonarQubeEnv('SonarQube') {
-                    sh """
+                withSonarQubeEnv('SonarQube') { // 'SonarQube' = nom de ton serveur dans Jenkins
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
+                        sh """
                         sonar-scanner \
                         -Dsonar.projectKey=my-angular-app \
                         -Dsonar.sources=src \
                         -Dsonar.host.url=$SONAR_HOST_URL \
                         -Dsonar.login=$SONAR_AUTH_TOKEN
-                    """
+                        """
+                    }
                 }
             }
         }
@@ -52,15 +53,14 @@ pipeline {
                 """
             }
         }
-
     }
 
     post {
         success {
-            echo "Pipeline finished successfully "
+            echo "Pipeline finished successfully ✅"
         }
         failure {
-            echo "Pipeline failed.. "
+            echo "Pipeline failed ❌"
         }
         always {
             echo "Pipeline run completed."
