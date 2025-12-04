@@ -1,65 +1,70 @@
-def commit_id
- 
 pipeline {
 
     agent any
- 
+
+    environment {
+        IMAGE_NAME = "richardchesterwood/k8s-fleetman-webapp-angular"
+        IMAGE_TAG = "release2"
+        SONARQUBE = "SonarQube" // nom du serveur SonarQube configuré dans Jenkins
+    }
+
     stages {
- 
+
         stage('Preparation') {
-
             steps {
-
                 checkout scm
-
-                sh "git rev-parse --short HEAD > .git/commit-id"
-
                 script {
-
-                    commit_id = readFile('.git/commit-id').trim()
-
+                    commit_id = sh(
+                        script: "git rev-parse --short HEAD",
+                        returnStdout: true
+                    ).trim()
                 }
-
+                echo "Commit ID: ${commit_id}"
             }
-
         }
- 
-        stage('Image Build') {
 
+        stage('Build Docker Image') {
             steps {
-
-                echo 'Building.....'
-
-                sh "scp -r -i \$(minikube ssh-key) ./* docker@\$(minikube ip):~/"
-
-                sh "minikube ssh 'docker build -t webapp:${commit_id} ./'"
-
-                echo 'build complete'
-
+                echo "Building Docker image..."
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                echo 'Docker build complete ✅'
             }
-
         }
- 
-        stage('Deploy') {
 
+        stage('Test & SonarQube Analysis') {
             steps {
-
-                echo 'Deploying to Kubernetes'
-
-                sh "sed -i -r 's|richardchesterwood/k8s-fleetman-webapp-angular:release2|webapp:${commit_id}|' ./manifests/workloads.yaml"
-
-                sh "kubectl get all"
-
-                sh "kubectl apply -f ./manifests/"
-
-                sh "kubectl get all"
-
-                echo 'deployment complete'
-
+                echo 'Running tests and SonarQube scan...'
+                withSonarQubeEnv("${SONARQUBE}") {
+                    // Exemple pour un projet Angular
+                    sh "npm install"
+                    sh "ng test --watch=false --browsers=ChromeHeadless"
+                    sh "sonar-scanner \
+                        -Dsonar.projectKey=my-angular-app \
+                        -Dsonar.sources=src \
+                        -Dsonar.host.url=$SONAR_HOST_URL \
+                        -Dsonar.login=$SONAR_AUTH_TOKEN"
+                }
             }
-
         }
- 
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo 'Deploying to Kubernetes...'
+                sh """
+                sed -i 's|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|' .manifests/workloads.yaml
+                kubectl apply -f .manifests/
+                kubectl get pods
+                """
+                echo 'Deployment complete ✅'
+            }
+        }
+
+    }
+
+    post {
+        always {
+            echo "Pipeline finished."
+        }
     }
 
 }
